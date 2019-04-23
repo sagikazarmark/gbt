@@ -9,6 +9,7 @@ import (
 	"github.com/sagikazarmark/gbt/internal/cli/command"
 )
 
+// nolint: gochecknoinits
 func init() {
 	cobra.EnableCommandSorting = false
 }
