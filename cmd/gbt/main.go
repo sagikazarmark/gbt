@@ -9,6 +9,10 @@ import (
 	"github.com/sagikazarmark/gbt/internal/cli/command"
 )
 
+func init() {
+	cobra.EnableCommandSorting = false
+}
+
 func main() {
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd := &cobra.Command{
