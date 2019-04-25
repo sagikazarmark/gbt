@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sagikazarmark/gbt/internal/cli/command"
+	"github.com/sagikazarmark/gbt/internal/cli"
 )
 
 // nolint: gochecknoinits
@@ -15,18 +15,10 @@ func init() {
 }
 
 func main() {
-	// rootCmd represents the base command when called without any subcommands
-	rootCmd := &cobra.Command{
-		Use:     "gbt [command]",
-		Short:   "Go build tool",
-		Version: version,
-	}
+	buildInfo := cli.BuildInfo{Version: version, CommitHash: commitHash, BuildDate: buildDate}
+	app := cli.NewApplication(buildInfo)
 
-	rootCmd.SetVersionTemplate(fmt.Sprintf("gbt version %s (%s) built on %s\n", version, commitHash, buildDate))
-
-	command.AddCommands(rootCmd)
-
-	if err := rootCmd.Execute(); err != nil {
+	if err := app.Execute(); err != nil {
 		fmt.Println(err)
 
 		os.Exit(1)
