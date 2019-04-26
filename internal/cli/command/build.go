@@ -3,13 +3,14 @@ package command
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/sagikazarmark/gbt/internal/gbt"
 )
 
 type buildOptions struct {
@@ -18,7 +19,7 @@ type buildOptions struct {
 }
 
 // NewBuildCommand returns a cobra command for building one or more targets.
-func NewBuildCommand() *cobra.Command {
+func NewBuildCommand(config *gbt.Config) *cobra.Command {
 	var options buildOptions
 
 	cmd := &cobra.Command{
@@ -30,7 +31,7 @@ func NewBuildCommand() *cobra.Command {
 
 			options.targets = args
 
-			return runBuild(options)
+			return runBuild(options, config)
 		},
 	}
 
@@ -41,8 +42,8 @@ func NewBuildCommand() *cobra.Command {
 	return cmd
 }
 
-func runBuild(options buildOptions) error {
-	targets, err := getTargets(options.targets)
+func runBuild(options buildOptions, config *gbt.Config) error {
+	targets, err := getTargets(options.targets, config)
 	if err != nil {
 		return err
 	}
@@ -109,22 +110,13 @@ func runBuild(options buildOptions) error {
 	return nil
 }
 
-func getTargets(selectedTargets []string) ([]string, error) {
-	files, err := ioutil.ReadDir("./cmd")
-	if err != nil {
-		return nil, err
-	}
-
+func getTargets(selectedTargets []string, config *gbt.Config) ([]string, error) {
 	var targets []string // nolint: prealloc
 	possibleTargets := map[string]bool{}
 
-	for _, file := range files {
-		if !file.IsDir() {
-			continue
-		}
-
-		targets = append(targets, file.Name())
-		possibleTargets[file.Name()] = true
+	for _, buildTarget := range config.Build.Targets {
+		targets = append(targets, buildTarget.Name)
+		possibleTargets[buildTarget.Name] = true
 	}
 
 	if len(selectedTargets) > 0 {
