@@ -11,8 +11,8 @@ func AddCommands(cmd *cobra.Command, config *gbt.Config) {
 	cmd.AddCommand(
 		NewBuildCommand(config),
 		NewRunCommand(config),
-		NewCheckCommand(),
+		NewCheckCommand(config),
 		NewTestCommand(),
-		NewLintCommand(),
+		NewLintCommand(config),
 	)
 }

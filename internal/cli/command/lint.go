@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
-	"time"
 
-	"github.com/golangci/golangci-lint/pkg/config"
+	lintConfig "github.com/golangci/golangci-lint/pkg/config"
 	"github.com/golangci/golangci-lint/pkg/exitcodes"
 	"github.com/golangci/golangci-lint/pkg/fsutils"
 	"github.com/golangci/golangci-lint/pkg/goutil"
@@ -19,6 +17,8 @@ import (
 	"github.com/golangci/golangci-lint/pkg/result"
 	"github.com/golangci/golangci-lint/pkg/result/processors"
 	"github.com/spf13/cobra"
+
+	"github.com/sagikazarmark/gbt/internal/gbt"
 )
 
 type lintOptions struct {
@@ -27,7 +27,7 @@ type lintOptions struct {
 }
 
 // NewLintCommand returns a cobra command for running linters.
-func NewLintCommand() *cobra.Command {
+func NewLintCommand(config *gbt.Config) *cobra.Command {
 	var options lintOptions
 
 	cmd := &cobra.Command{
@@ -39,7 +39,7 @@ func NewLintCommand() *cobra.Command {
 
 			options.packages = args
 
-			return runLint(options)
+			return runLint(options, config)
 		},
 	}
 
@@ -50,19 +50,20 @@ func NewLintCommand() *cobra.Command {
 	return cmd
 }
 
-func runLint(options lintOptions) error {
+func runLint(options lintOptions, config *gbt.Config) error {
 	var reportData report.Data
 
 	logger := report.NewLogWrapper(logutils.NewStderrLog(""), &reportData)
 
-	cfg := config.NewDefault()
-	setDefaults(cfg)
+	// cfg := config.NewDefault()
+	// setDefaults(cfg)
+	c := config.Lint
+	cfg := &c
 	cfg.Run.IsVerbose = options.verbose
 
-	conf := config.NewDefault()
-	setDefaults(conf)
+	conf := &c
 
-	r := config.NewFileReader(conf, cfg, logger.Child("config_reader"))
+	r := lintConfig.NewFileReader(conf, cfg, logger.Child("config_reader"))
 	if err := r.Read(); err != nil {
 		return err
 	}
@@ -178,55 +179,25 @@ func runLint(options lintOptions) error {
 	return nil
 }
 
-func createPrinter(conf *config.Config, reportData *report.Data, logger logutils.Log) (printers.Printer, error) {
+func createPrinter(conf *lintConfig.Config, reportData *report.Data, logger logutils.Log) (printers.Printer, error) {
 	var p printers.Printer
 	format := conf.Output.Format
 	switch format {
-	case config.OutFormatJSON:
+	case lintConfig.OutFormatJSON:
 		p = printers.NewJSON(reportData)
-	case config.OutFormatColoredLineNumber, config.OutFormatLineNumber:
+	case lintConfig.OutFormatColoredLineNumber, lintConfig.OutFormatLineNumber:
 		p = printers.NewText(conf.Output.PrintIssuedLine,
-			format == config.OutFormatColoredLineNumber, conf.Output.PrintLinterName,
+			format == lintConfig.OutFormatColoredLineNumber, conf.Output.PrintLinterName,
 			logger.Child("text_printer"))
-	case config.OutFormatTab:
+	case lintConfig.OutFormatTab:
 		p = printers.NewTab(conf.Output.PrintLinterName, logger.Child("tab_printer"))
-	case config.OutFormatCheckstyle:
+	case lintConfig.OutFormatCheckstyle:
 		p = printers.NewCheckstyle()
-	case config.OutFormatCodeClimate:
+	case lintConfig.OutFormatCodeClimate:
 		p = printers.NewCodeClimate()
 	default:
 		return nil, fmt.Errorf("unknown output format %s", format)
 	}
 
 	return p, nil
-}
-
-func setDefaults(conf *config.Config) {
-	conf.Output.Format = config.OutFormatColoredLineNumber
-	conf.Output.PrintIssuedLine = true
-	conf.Output.PrintLinterName = true
-	conf.Output.Color = "auto"
-	conf.Run.ExitCodeIfIssuesFound = exitcodes.IssuesFound
-	conf.Run.Deadline = time.Minute
-	conf.Run.AnalyzeTests = true
-	conf.Run.Concurrency = getDefaultConcurrency()
-	conf.LintersSettings.Errcheck.Ignore = "fmt:.*"
-	conf.LintersSettings.Golint.MinConfidence = 0.8
-	conf.LintersSettings.Gofmt.Simplify = true
-	conf.LintersSettings.Gocyclo.MinComplexity = 30
-	conf.LintersSettings.Dupl.Threshold = 150
-	conf.LintersSettings.Goconst.MinStringLen = 3
-	conf.LintersSettings.Goconst.MinOccurrencesCount = 3
-	conf.LintersSettings.Lll.TabWidth = 1
-	conf.Issues.UseDefaultExcludes = true
-	conf.Issues.MaxIssuesPerLinter = 50
-	conf.Issues.MaxSameIssues = 3
-}
-
-func getDefaultConcurrency() int {
-	if os.Getenv("HELP_RUN") == "1" {
-		return 8 // to make stable concurrency for README help generating builds
-	}
-
-	return runtime.NumCPU()
 }

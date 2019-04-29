@@ -29,7 +29,9 @@ func NewApplication(buildInfo BuildInfo) *cobra.Command {
 	v.AddConfigPath(".")
 	// v.AddConfigPath("$GBT_CONFIG_DIR/")
 
-	config := new(gbt.Config)
+	configure(v)
+
+	config := gbt.NewConfig()
 
 	rootCmd := &cobra.Command{
 		Use:     "gbt [command]",

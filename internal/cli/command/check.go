@@ -2,6 +2,8 @@ package command
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/sagikazarmark/gbt/internal/gbt"
 )
 
 type checkOptions struct {
@@ -12,7 +14,7 @@ type checkOptions struct {
 }
 
 // NewCheckCommand returns a cobra command for running tests and linters.
-func NewCheckCommand() *cobra.Command {
+func NewCheckCommand(config *gbt.Config) *cobra.Command {
 	var options checkOptions
 
 	cmd := &cobra.Command{
@@ -24,7 +26,7 @@ func NewCheckCommand() *cobra.Command {
 
 			options.packages = args
 
-			return runCheck(options)
+			return runCheck(options, config)
 		},
 	}
 
@@ -37,7 +39,7 @@ func NewCheckCommand() *cobra.Command {
 	return cmd
 }
 
-func runCheck(options checkOptions) error {
+func runCheck(options checkOptions, config *gbt.Config) error {
 	testOptions := testOptions(options)
 
 	if err := runTest(testOptions); err != nil {
@@ -49,7 +51,7 @@ func runCheck(options checkOptions) error {
 		verbose:  options.verbose,
 	}
 
-	if err := runLint(lintOptions); err != nil {
+	if err := runLint(lintOptions, config); err != nil {
 		return err
 	}
 
